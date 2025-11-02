@@ -190,7 +190,6 @@ class DatabaseManager:
                 VALUES (?, ?, ?, ?)
             ''', (cliente_id, valor, data_pagamento, mes_referencia))
             
-            # Atualizar status na mesma transação
             cursor.execute('''
                 INSERT OR REPLACE INTO cliente_status 
                 (cliente_id, status, last_payment_date) 
@@ -239,7 +238,14 @@ class DatabaseManager:
     def get_conta_config(self, conta_id):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM contas_config WHERE conta_id = ?', (conta_id,))
+            cursor.execute('''
+                SELECT cc.id, cc.conta_id, cc.frequencia, 
+                    COALESCE(cc.dia_vencimento, cf.dia_vencimento) as dia_vencimento,
+                    cc.prox_data_cobranca, cc.feriados_ajustar
+                FROM contas_config cc
+                JOIN contas_fixas cf ON cc.conta_id = cf.id
+                WHERE cc.conta_id = ?
+            ''', (conta_id,))
             result = cursor.fetchone()
             return ContaConfig(*result) if result else None
 
@@ -251,3 +257,14 @@ class DatabaseManager:
                 (conta_id, prox_data_cobranca) 
                 VALUES (?, ?)
             ''', (conta_id, proxima_data.strftime('%Y-%m-%d')))
+            
+    def get_contas_sem_config(self):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT cf.id 
+                FROM contas_fixas cf
+                LEFT JOIN contas_config cc ON cf.id = cc.conta_id
+                WHERE cc.conta_id IS NULL AND cf.ativo = 1
+            ''')
+            return cursor.fetchall()
