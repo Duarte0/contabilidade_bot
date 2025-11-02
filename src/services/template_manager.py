@@ -1,5 +1,4 @@
-from core.database import DatabaseManager
-from template_engine import TemplateEngine
+from .template_engine import TemplateEngine
 
 class TemplateManager:
     def __init__(self, db):
