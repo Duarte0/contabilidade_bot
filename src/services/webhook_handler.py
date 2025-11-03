@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import sys
 
@@ -73,27 +74,37 @@ def _process_message_received(data):
     
     pagamento_keywords = ['paguei', 'pagamento', 'pago', 'transferência', 'transferi', 'depositei']
     
-    if any(keyword in text for keyword in pagamento_keywords):
+    if any(f" {keyword} " in f" {text} " for keyword in pagamento_keywords):
         print(f"DEBUG - Pagamento detectado para {cliente.nome}")
         _registrar_pagamento_detectado(cliente.id, text)
 
 def _process_message_updated(data):
     pass
 
+def _get_valor_conta_cliente(cliente_id):
+    """Busca o valor da conta ativa do cliente"""
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT valor FROM contas_fixas 
+            WHERE cliente_id = ? AND ativo = 1 
+            ORDER BY id DESC LIMIT 1
+        ''', (cliente_id,))
+        result = cursor.fetchone()
+        return result[0] if result else None
+
 def _registrar_pagamento_detectado(cliente_id, mensagem):
-    from datetime import datetime
+    valor = _get_valor_conta_cliente(cliente_id)
+    
+    if not valor:
+        print(f"ERRO: Não encontrou valor para cliente {cliente_id}")
+        return
     
     db.registrar_pagamento(
         cliente_id=cliente_id,
-        valor=0,
+        valor=valor,
         data_pagamento=datetime.now().strftime('%Y-%m-%d'),
         mes_referencia=datetime.now().strftime('%Y-%m')
-    )
-    
-    db.registrar_interacao(
-        cliente_id=cliente_id,
-        tipo_interacao='pagamento_detectado',
-        mensagem=f"Pagamento detectado: {mensagem}"
     )
 
 if __name__ == "__main__":
