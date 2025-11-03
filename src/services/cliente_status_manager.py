@@ -1,21 +1,19 @@
-from datetime import datetime, timedelta
-from core.database import DatabaseManager
+from datetime import datetime
 
 class ClienteStatusManager:
     def __init__(self, db):
         self.db = db
 
-    def verificar_inadimplencia(self, cliente_id):
-        """Verifica se cliente está inadimplente baseado no último pagamento"""
-        status = self.db.get_cliente_status(cliente_id)
+    def verificar_inadimplencia(self, cliente_id, dias_tolerancia=30):
+        ultimo_pagamento = self.db.get_historico_pagamentos_cliente(cliente_id)
         
-        if not status or not status.last_payment_date:
-            return True 
+        if not ultimo_pagamento:
+            return False
             
-        ultimo_pagamento = datetime.strptime(status.last_payment_date, '%Y-%m-%d')
-        dias_sem_pagamento = (datetime.now() - ultimo_pagamento).days
+        ultima_data = datetime.strptime(ultimo_pagamento, '%Y-%m-%d').date()
+        dias_sem_pagamento = (datetime.now().date() - ultima_data).days
         
-        return dias_sem_pagamento > status.dias_tolerancia
+        return dias_sem_pagamento > dias_tolerancia
 
     def atualizar_status_automatico(self):
         """Atualiza status de todos os clientes baseado em pagamentos"""
