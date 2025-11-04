@@ -1,34 +1,53 @@
-# Sistema de Cobrança Automática - Contabilidade
+# Automação Digisac Mensagens
 
-Sistema automatizado de cobrança para escritórios contábeis via WhatsApp com detecção de pagamentos em tempo real.
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Digisac](https://img.shields.io/badge/Digisac-API-green)
 
-## Funcionalidades
+## 📝 Descrição do Projeto
+Sistema de automação para envio em massa de mensagens via Digisac, especializado em cobranças recorrentes e comunicação automatizada com clientes.
 
-- Cobrança automática via WhatsApp (Digisac API)
-- Detecção automática de pagamentos através de webhook
-- Templates de mensagem dinâmicos e personalizáveis
-- Gestão de estado do cliente (ativo/inadimplente)
-- Agendamento flexível com ajuste para feriados e finais de semana
-- Sistema de relatórios e analytics
-- API para integração com sistemas externos
+## 🚀 Status do Projeto
+> **Em desenvolvimento** 
 
-## Tecnologias
+## 🎯 Funcionalidades e Demonstração da Aplicação
 
-- Python 3.8+
-- Flask
-- SQLite
-- Digisac API
+### Funcionalidades Principais
+- **Cobranças Automáticas** - Agendamento diário de mensagens
+- **Respostas Inteligentes** - Processamento automático de interações
+- **Gestão de Clientes** - Controle de status e histórico
+- **Templates Personalizáveis** - Mensagens dinâmicas e profissionais
 
+## Configuração para uso
+```
+# 1. CONFIGURAÇÕES DIGISAC 
+# ---------------------------------------
+# Obtenha seu token em: https://seu_subdominio.digisac.chat
+DIGISAC_API_URL=https://seu_subdominio.digisac.chat/api/v1
+DIGISAC_API_TOKEN=seu_token_digisac_aqui
 
-## Configuração Rápida
+# Webhook URL (obter executando: ngrok http 5000)
+DIGISAC_WEBHOOK_URL=https://seu-subdominio.ngrok-free.dev
 
-1. Clone o repositório
-2. Configure variáveis de ambiente em `.env`
-3. Execute `pip install -r requirements.txt`
-4. Popule o banco com `python src/scripts/populate_db.py`
-5. Inicie o webhook com `python src/services/webhook_handler.py`
-6. Execute cobranças com `python src/main.py`
+# 2. BANCO DE DADOS POSTGRESQL
+# -------------------------------------------
+# Configure o PostgreSQL via Docker:
+# docker run --name cobranca-postgres -e POSTGRES_PASSWORD=sua_senha -p 5432:5432 -d postgres:15
+# docker exec -it cobranca-postgres psql -U postgres -c "CREATE DATABASE cobranca_db;"
 
-## Documentação
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=cobranca_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=sua_senha_postgres
+```
 
-Consulte `docs/SETUP.md` para configuração detalhada do Digisac, webhook e ambiente de produção.
+## Instalação Rápida
+```
+git clone https://github.com/Duarte0/automacao-digisac-mensagens.git
+cd automacao-digisac-mensagens
+pip install -r requirements.txt
+python src/services/webhook_handler.py
+ngrok http 5000
+python src/main.py
+```
