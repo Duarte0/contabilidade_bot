@@ -55,10 +55,10 @@ class AgendamentoManager:
     def _get_dia_vencimento(self, conta_id: int) -> Optional[int]:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT dia_vencimento FROM contas_fixas WHERE id = ?', (conta_id,))
+            cursor.execute('SELECT dia_vencimento FROM contas_fixas WHERE id = %s', (conta_id,))
             result = cursor.fetchone()
             return result[0] if result else None
-    
+        
     def get_clientes_para_cobrar_hoje(self) -> List[Tuple]:
         hoje = datetime.now().date()
         
@@ -69,8 +69,9 @@ class AgendamentoManager:
                 FROM clientes c
                 JOIN contas_fixas cf ON c.id = cf.cliente_id
                 LEFT JOIN contas_config cc ON cf.id = cc.conta_id
-                WHERE (cc.prox_data_cobranca = ? OR (cc.prox_data_cobranca IS NULL AND cf.dia_vencimento = ?))
-                AND cf.ativo = 1
+                WHERE (cc.prox_data_cobranca = %s OR 
+                    (cc.prox_data_cobranca IS NULL AND cf.dia_vencimento = %s))
+                AND cf.ativo = true
             ''', (hoje, hoje.day))
             
             return cursor.fetchall()
@@ -84,10 +85,10 @@ class AgendamentoManager:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT cf.id, COALESCE(cc.frequencia, 'mensal'), COALESCE(cc.feriados_ajustar, 1)
+                SELECT cf.id, COALESCE(cc.frequencia, 'mensal'), COALESCE(cc.feriados_ajustar, true)
                 FROM contas_fixas cf
                 LEFT JOIN contas_config cc ON cf.id = cc.conta_id
-                WHERE cc.prox_data_cobranca IS NULL AND cf.ativo = 1
+                WHERE cc.prox_data_cobranca IS NULL AND cf.ativo = true
             ''')
             
             for conta_id, frequencia, feriados_ajustar in cursor.fetchall():

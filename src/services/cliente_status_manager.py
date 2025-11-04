@@ -5,13 +5,12 @@ class ClienteStatusManager:
         self.db = db
 
     def verificar_inadimplencia(self, cliente_id, dias_tolerancia=30):
-        ultimo_pagamento = self.db.get_historico_pagamentos_cliente(cliente_id)
+        ultimo_pagamento = self.db.get_ultimo_pagamento_cliente(cliente_id)
         
         if not ultimo_pagamento:
             return False
             
-        ultima_data = datetime.strptime(ultimo_pagamento, '%Y-%m-%d').date()
-        dias_sem_pagamento = (datetime.now().date() - ultima_data).days
+        dias_sem_pagamento = (datetime.now().date() - ultimo_pagamento).days
         
         return dias_sem_pagamento > dias_tolerancia
 
