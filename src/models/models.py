@@ -61,6 +61,5 @@ class ContaConfig:
     id: int
     conta_id: int
     frequencia: str
-    dia_vencimento: int
     prox_data_cobranca: Optional[str] = None
     feriados_ajustar: bool = True
