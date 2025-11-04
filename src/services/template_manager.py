@@ -38,14 +38,14 @@ class TemplateManager:
     def _get_cliente_data(self, cliente_id: int) -> Dict[str, str]:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT nome FROM clientes WHERE id = ?', (cliente_id,))
+            cursor.execute('SELECT nome FROM clientes WHERE id = %s', (cliente_id,))
             result = cursor.fetchone()
             return {'nome': result[0]} if result else {}
 
     def _get_conta_data(self, conta_id: int) -> Dict[str, Any]:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT descricao, valor, dia_vencimento FROM contas_fixas WHERE id = ?', (conta_id,))
+            cursor.execute('SELECT descricao, valor, dia_vencimento FROM contas_fixas WHERE id = %s', (conta_id,))
             result = cursor.fetchone()
             return {
                 'descricao': result[0],

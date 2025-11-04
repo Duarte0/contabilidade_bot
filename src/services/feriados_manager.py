@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
+from typing import Dict, Set
 import requests
 import json
 
 class FeriadosManager:
     def __init__(self):
         self.feriados_nacionais = self._carregar_feriados_fixos()
+        self._cache_feriados_moveis: Dict[int, Dict[str, datetime]] = {}
+        self._cache_datas_feriados: Dict[int, Set[datetime.date]] = {}
     
-    def _carregar_feriados_fixos(self):
+    def _carregar_feriados_fixos(self) -> Dict[str, str]:
         return {
             '01-01': 'Confraternização Universal',
             '21-04': 'Tiradentes',
@@ -18,7 +21,8 @@ class FeriadosManager:
             '25-12': 'Natal'
         }
     
-    def _carregar_feriados_moveis(self, ano):
+    def _calcular_pascoa(self, ano: int) -> datetime:
+        """Calcula data da Páscoa usando algoritmo de Gauss"""
         a = ano % 19
         b = ano // 100
         c = ano % 100
@@ -34,36 +38,62 @@ class FeriadosManager:
         mes = (h + l - 7 * m + 114) // 31
         dia = ((h + l - 7 * m + 114) % 31) + 1
         
-        pascoa = datetime(ano, mes, dia)
+        return datetime(ano, mes, dia)
+    
+    def _carregar_feriados_moveis(self, ano: int) -> Dict[str, datetime]:
+        """Carrega feriados móveis com cache"""
+        if ano in self._cache_feriados_moveis:
+            return self._cache_feriados_moveis[ano]
         
-        return {
+        pascoa = self._calcular_pascoa(ano)
+        
+        feriados = {
             'carnaval': pascoa - timedelta(days=47),
             'sexta_santa': pascoa - timedelta(days=2),
             'pascoa': pascoa,
             'corpus_christi': pascoa + timedelta(days=60)
         }
+        
+        self._cache_feriados_moveis[ano] = feriados
+        return feriados
     
-    def is_feriado(self, data):
-        data_str = data.strftime('%d-%m')
-        ano = data.year
+    def _get_datas_feriados_ano(self, ano: int) -> Set[datetime.date]:
+        """Retorna conjunto de todas as datas de feriado do ano"""
+        if ano in self._cache_datas_feriados:
+            return self._cache_datas_feriados[ano]
         
-        if data_str in self.feriados_nacionais:
-            return True
+        datas_feriados = set()
         
+        # Feriados fixos
+        for data_str in self.feriados_nacionais:
+            dia, mes = map(int, data_str.split('-'))
+            datas_feriados.add(datetime(ano, mes, dia).date())
+        
+        # Feriados móveis
         feriados_moveis = self._carregar_feriados_moveis(ano)
         for feriado in feriados_moveis.values():
-            if feriado.date() == data.date():
-                return True
+            datas_feriados.add(feriado.date())
         
-        return False
+        self._cache_datas_feriados[ano] = datas_feriados
+        return datas_feriados
     
-    def is_final_semana(self, data):
-        return data.weekday() >= 5  
+    def is_feriado(self, data: datetime) -> bool:
+        """Verifica se a data é feriado (otimizado com cache)"""
+        return data.date() in self._get_datas_feriados_ano(data.year)
     
-    def ajustar_data_util(self, data):
+    def is_final_semana(self, data: datetime) -> bool:
+        return data.weekday() >= 5
+    
+    def ajustar_data_util(self, data: datetime) -> datetime:
+        """Ajusta data para o próximo dia útil"""
         data_ajustada = data
         
         while self.is_feriado(data_ajustada) or self.is_final_semana(data_ajustada):
             data_ajustada += timedelta(days=1)
         
         return data_ajustada
+    
+    def pre_carregar_feriados(self, anos: range):
+        """Pré-carrega feriados para múltiplos anos"""
+        for ano in anos:
+            self._get_datas_feriados_ano(ano)
