@@ -4,15 +4,14 @@ import os
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, ROOT_DIR)
 
-from core.database import DatabaseManager
+from core.database import DatabaseManager 
 from services.digisac_service import DigisacAPI
 from services.template_manager import TemplateManager
 from services.agendamento_manager import AgendamentoManager
 from services.cliente_status_manager import ClienteStatusManager
-from core.config import DATABASE_PATH
 
 def main():
-    db = DatabaseManager(DATABASE_PATH)
+    db = DatabaseManager(use_postgres=True) 
     agendamento_manager = AgendamentoManager(db)
     template_manager = TemplateManager(db)
     status_manager = ClienteStatusManager(db)
