@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from typing import Optional
 
 @dataclass
@@ -43,8 +44,8 @@ class ContaFixa:
 class ClienteStatus:
     id: int
     cliente_id: int
-    status: str  # ativo, inadimplente, suspenso
-    last_payment_date: Optional[str]
+    status: str
+    last_payment_date: Optional[date]
     payment_preferences: Optional[str]
     dias_tolerancia: int = 0
 
