@@ -15,7 +15,7 @@ from services.digisac_service import DigisacAPI
 from services.template_engine import TemplateEngine
 
 app = Flask(__name__)
-db = DatabaseManager(use_postgres=True) 
+db = DatabaseManager() 
 digisac = DigisacAPI()
 template_engine = TemplateEngine(db)
 
