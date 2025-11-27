@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
@@ -151,14 +151,9 @@ class BatchSendRequest(BaseModel):
     tipo: TipoCobranca
     template_name: Optional[str] = None
     mensagem_padrao: Optional[str] = None
+    variaveis_extras: Optional[Dict[str, Any]] = {}
     mensagens_customizadas: Optional[Dict[int, str]] = {}
     enviar_agora: bool = True
-    
-    @validator('mensagem_padrao', 'template_name')
-    def check_message_source(cls, v, values):
-        if not v and not values.get('template_name'):
-            raise ValueError('Forneça template_name ou mensagem_padrao')
-        return v
 
 class BatchSendResponse(BaseModel):
     total_clientes: int
