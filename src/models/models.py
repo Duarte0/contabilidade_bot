@@ -1,9 +1,14 @@
+"""
+Modelos de dados simplificados - Sistema de Envio de Mensagens
+Apenas os modelos essenciais para o funcionamento do sistema
+"""
+
 from dataclasses import dataclass
-from datetime import date
 from typing import Optional
 
 @dataclass
 class Cliente:
+    """Cliente/Contato do sistema"""
     id: int
     nome: str
     digisac_contact_id: str
@@ -12,55 +17,11 @@ class Cliente:
     created_at: Optional[str] = None
 
 @dataclass
-class ContaFixa:
-    id: int
-    cliente_id: int
-    descricao: str
-    valor: float
-    dia_vencimento: int
-    ativo: bool = True
-    
-    from dataclasses import dataclass
-from typing import Optional
-
-@dataclass
-class Cliente:
-    id: int
-    nome: str
-    digisac_contact_id: str
-    telefone: str = None
-    email: str = None
-
-@dataclass
-class ContaFixa:
-    id: int
-    cliente_id: int
-    descricao: str
-    valor: float
-    dia_vencimento: int
-    ativo: bool = True
-
-@dataclass
-class ClienteStatus:
-    id: int
-    cliente_id: int
-    status: str
-    last_payment_date: Optional[date]
-    payment_preferences: Optional[str]
-    dias_tolerancia: int = 0
-
-@dataclass
 class MessageTemplate:
+    """Template de mensagem reutilizável"""
     id: int
     nome: str
     template_text: str
     variaveis: Optional[str]
     ativo: bool = True
-    
-@dataclass
-class ContaConfig:
-    id: int
-    conta_id: int
-    frequencia: str
-    prox_data_cobranca: Optional[str] = None
-    feriados_ajustar: bool = True
+    tipo: str = 'financeira'  
