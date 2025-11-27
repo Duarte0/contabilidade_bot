@@ -1,14 +1,16 @@
 import psycopg2
 import logging
 from contextlib import contextmanager
-from typing import List, Optional, Tuple, Any, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
-from models.models import Cliente, ClienteStatus, ContaConfig, ContaFixa, MessageTemplate
+from models.models import Cliente, MessageTemplate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:
+    """Gerenciador simplificado do banco de dados - Foco em envio de mensagens"""
+    
     def __init__(self, connection_string: str = None):
         from .config import POSTGRES_CONNECTION_STRING
         self.connection_string = connection_string or POSTGRES_CONNECTION_STRING
@@ -16,6 +18,7 @@ class DatabaseManager:
         self.init_database()
 
     def _init_pool(self):
+        """Inicializa pool de conexões"""
         try:
             from psycopg2.pool import SimpleConnectionPool
             self.pool = SimpleConnectionPool(
@@ -34,6 +37,7 @@ class DatabaseManager:
 
     @contextmanager
     def get_connection(self):
+        """Context manager para gerenciar conexões"""
         conn = None
         try:
             if self.pool:
@@ -70,7 +74,7 @@ class DatabaseManager:
                 conn.close()
 
     def init_database(self):
-        """Inicializa todas as tabelas do sistema com constraints"""
+        """Inicializa schema simplificado - apenas 3 tabelas"""
         tables = [
             '''
             CREATE TABLE IF NOT EXISTS clientes (
@@ -79,105 +83,48 @@ class DatabaseManager:
                 digisac_contact_id TEXT UNIQUE NOT NULL,
                 telefone TEXT,
                 email TEXT,
+                status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'suspenso')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS contas_fixas (
-                id SERIAL PRIMARY KEY,
-                cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-                descricao TEXT NOT NULL,
-                valor DECIMAL(10,2) NOT NULL CHECK (valor > 0),
-                dia_vencimento INTEGER NOT NULL CHECK (dia_vencimento BETWEEN 1 AND 31),
-                ativo BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS contas_config (
-                id SERIAL PRIMARY KEY,
-                conta_id INTEGER UNIQUE NOT NULL REFERENCES contas_fixas(id) ON DELETE CASCADE,
-                frequencia TEXT DEFAULT 'mensal' CHECK (frequencia IN ('diaria', 'semanal', 'quinzenal', 'mensal', 'bimestral')),
-                prox_data_cobranca DATE,
-                feriados_ajustar BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS historico_cobrancas (
-                id SERIAL PRIMARY KEY,
-                cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-                conta_id INTEGER NOT NULL REFERENCES contas_fixas(id) ON DELETE CASCADE,
-                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                mensagem TEXT NOT NULL,
-                status TEXT NOT NULL CHECK (status IN ('enviado', 'erro', 'pendente')),
-                tentativas INTEGER DEFAULT 1,
-                erro_detalhe TEXT
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS cliente_status (
-                id SERIAL PRIMARY KEY,
-                cliente_id INTEGER UNIQUE NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-                status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inadimplente', 'suspenso', 'cancelado')),
-                last_payment_date DATE,
-                dias_tolerancia INTEGER DEFAULT 30,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS historico_pagamentos (
-                id SERIAL PRIMARY KEY,
-                cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-                valor DECIMAL(10,2) NOT NULL CHECK (valor > 0),
-                data_pagamento DATE NOT NULL,
-                mes_referencia TEXT NOT NULL,
-                confirmado BOOLEAN DEFAULT false,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            ''',
-            '''
-            CREATE TABLE IF NOT EXISTS interacoes_cliente (
-                id SERIAL PRIMARY KEY,
-                cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-                tipo_interacao TEXT NOT NULL CHECK (tipo_interacao IN (
-                    'pagamento_detectado', 'duvida', 'reclamacao', 'outro',
-                    'confirmacao', 'urgencia_contato', 'parcelamento', 'duvida_generica',
-                    'duvida_valor', 'duvida_data'
-                )),
-                mensagem TEXT NOT NULL,
-                resolvido BOOLEAN DEFAULT false,
-                data_interacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             ''',
             '''
             CREATE TABLE IF NOT EXISTS message_templates (
                 id SERIAL PRIMARY KEY,
                 nome TEXT UNIQUE NOT NULL,
+                tipo TEXT DEFAULT 'financeira' CHECK (tipo IN ('financeira', 'documento', 'geral')),
                 template_text TEXT NOT NULL,
                 variaveis TEXT,
                 ativo BOOLEAN DEFAULT true,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS historico_envios (
+                id SERIAL PRIMARY KEY,
+                cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+                tipo TEXT DEFAULT 'financeira' CHECK (tipo IN ('financeira', 'documento', 'geral')),
+                template_usado TEXT,
+                mensagem TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('enviado', 'erro', 'pendente')),
+                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tentativas INTEGER DEFAULT 1,
+                erro_detalhe TEXT
+            )
             '''
         ]
 
         indexes = [
             'CREATE INDEX IF NOT EXISTS idx_clientes_contact_id ON clientes(digisac_contact_id)',
-            'CREATE INDEX IF NOT EXISTS idx_contas_fixas_cliente_id ON contas_fixas(cliente_id)',
-            'CREATE INDEX IF NOT EXISTS idx_contas_config_conta_id ON contas_config(conta_id)',
-            'CREATE INDEX IF NOT EXISTS idx_contas_config_prox_data ON contas_config(prox_data_cobranca)',
-            'CREATE INDEX IF NOT EXISTS idx_historico_cobrancas_cliente_id ON historico_cobrancas(cliente_id)',
-            'CREATE INDEX IF NOT EXISTS idx_historico_cobrancas_data_envio ON historico_cobrancas(data_envio)',
-            'CREATE INDEX IF NOT EXISTS idx_historico_pagamentos_cliente_id ON historico_pagamentos(cliente_id)',
-            'CREATE INDEX IF NOT EXISTS idx_historico_pagamentos_data ON historico_pagamentos(data_pagamento)',
-            'CREATE INDEX IF NOT EXISTS idx_cliente_status_cliente_id ON cliente_status(cliente_id)',
-            'CREATE INDEX IF NOT EXISTS idx_cliente_status_last_payment ON cliente_status(last_payment_date)'
+            'CREATE INDEX IF NOT EXISTS idx_clientes_nome ON clientes(nome)',
+            'CREATE INDEX IF NOT EXISTS idx_clientes_telefone ON clientes(telefone)',
+            'CREATE INDEX IF NOT EXISTS idx_clientes_status ON clientes(status)',
+            'CREATE INDEX IF NOT EXISTS idx_templates_tipo ON message_templates(tipo) WHERE ativo = true',
+            'CREATE INDEX IF NOT EXISTS idx_historico_envios_cliente_id ON historico_envios(cliente_id)',
+            'CREATE INDEX IF NOT EXISTS idx_historico_envios_data_envio ON historico_envios(data_envio)',
+            'CREATE INDEX IF NOT EXISTS idx_historico_envios_tipo ON historico_envios(tipo)',
+            'CREATE INDEX IF NOT EXISTS idx_historico_envios_status ON historico_envios(status)'
         ]
 
         with self.get_connection() as conn:
@@ -187,16 +134,18 @@ class DatabaseManager:
                 try:
                     cursor.execute(table_sql)
                 except Exception as e:
-                    logger.warning(f"Tabela possivelmente já existe: {e}")
+                    logger.warning(f"Erro ao criar tabela: {e}")
             
             for index_sql in indexes:
                 try:
                     cursor.execute(index_sql)
                 except Exception as e:
-                    logger.warning(f"Índice possivelmente já existe: {e}")
-            
+                    logger.warning(f"Erro ao criar índice: {e}")
 
+    # ========== CLIENTES ==========
+    
     def inserir_cliente(self, nome: str, digisac_contact_id: str, telefone: str = None, email: str = None) -> int:
+        """Insere ou atualiza um cliente"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -213,6 +162,7 @@ class DatabaseManager:
             return result[0] if result else None
 
     def get_cliente_by_contact_id(self, contact_id: str) -> Optional[Cliente]:
+        """Busca cliente por ID do Digisac"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -223,6 +173,7 @@ class DatabaseManager:
             return Cliente(*result) if result else None
 
     def get_cliente_by_id(self, cliente_id: int) -> Optional[Cliente]:
+        """Busca cliente por ID"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -232,263 +183,158 @@ class DatabaseManager:
             result = cursor.fetchone()
             return Cliente(*result) if result else None
 
+    def get_cliente_por_telefone(self, telefone: str) -> Optional[Cliente]:
+        """Busca cliente por telefone"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, nome, digisac_contact_id, telefone, email 
+                FROM clientes WHERE telefone = %s
+            ''', (telefone,))
+            result = cursor.fetchone()
+            return Cliente(*result) if result else None
+
     def get_all_clientes(self) -> List[Cliente]:
+        """Retorna todos os clientes"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT id, nome, digisac_contact_id, telefone, email FROM clientes')
             return [Cliente(*row) for row in cursor.fetchall()]
-
-    def inserir_conta_fixa(self, cliente_id: int, descricao: str, valor: float, dia_vencimento: int) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO contas_fixas (cliente_id, descricao, valor, dia_vencimento)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-            ''', (cliente_id, descricao, valor, dia_vencimento))
-            return cursor.fetchone()[0]
-
-    def get_contas_fixas_cliente(self, cliente_id: int) -> List[ContaFixa]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, cliente_id, descricao, valor, dia_vencimento, ativo 
-                FROM contas_fixas WHERE cliente_id = %s AND ativo = true
-            ''', (cliente_id,))
-            return [ContaFixa(*row) for row in cursor.fetchall()]
-
-    def get_conta_config(self, conta_id: int) -> Optional[ContaConfig]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, conta_id, frequencia, prox_data_cobranca, feriados_ajustar
-                FROM contas_config WHERE conta_id = %s
-            ''', (conta_id,))
-            result = cursor.fetchone()
-            return ContaConfig(*result) if result else None
-
-    def update_proxima_cobranca(self, conta_id: int, proxima_data: datetime):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO contas_config (conta_id, prox_data_cobranca) 
-                VALUES (%s, %s)
-                ON CONFLICT (conta_id) 
-                DO UPDATE SET 
-                    prox_data_cobranca = EXCLUDED.prox_data_cobranca,
-                    updated_at = CURRENT_TIMESTAMP
-            ''', (conta_id, proxima_data.strftime('%Y-%m-%d')))
-
-    def update_conta_config(self, conta_id: int, frequencia: str = None, 
-                          prox_data_cobranca: datetime = None, feriados_ajustar: bool = None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Buscar configuração atual
-            current = self.get_conta_config(conta_id)
-            
-            if not current:
-                cursor.execute('''
-                    INSERT INTO contas_config (conta_id, frequencia, prox_data_cobranca, feriados_ajustar)
-                    VALUES (%s, %s, %s, %s)
-                ''', (conta_id, frequencia or 'mensal', 
-                      prox_data_cobranca.strftime('%Y-%m-%d') if prox_data_cobranca else None, 
-                      feriados_ajustar or True))
-            else:
-                update_fields = []
-                update_data = []
-                
-                if frequencia is not None:
-                    update_fields.append("frequencia = %s")
-                    update_data.append(frequencia)
-                
-                if prox_data_cobranca is not None:
-                    update_fields.append("prox_data_cobranca = %s")
-                    update_data.append(prox_data_cobranca.strftime('%Y-%m-%d'))
-                
-                if feriados_ajustar is not None:
-                    update_fields.append("feriados_ajustar = %s")
-                    update_data.append(feriados_ajustar)
-                
-                if update_fields:
-                    update_fields.append("updated_at = CURRENT_TIMESTAMP")
-                    update_data.append(conta_id)
-                    cursor.execute(f'''
-                        UPDATE contas_config 
-                        SET {', '.join(update_fields)}
-                        WHERE conta_id = %s
-                    ''', update_data)
-
-    def get_clientes_para_cobrar_hoje(self) -> List[Tuple]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            hoje = datetime.now().date()
-            
-            cursor.execute('''
-                SELECT c.id, c.digisac_contact_id, c.nome, cf.descricao, cf.valor, cf.id
-                FROM clientes c
-                JOIN contas_fixas cf ON c.id = cf.cliente_id
-                LEFT JOIN contas_config cc ON cf.id = cc.conta_id
-                WHERE (cc.prox_data_cobranca = %s OR 
-                      (cc.prox_data_cobranca IS NULL AND cf.dia_vencimento = %s))
-                AND cf.ativo = true
-            ''', (hoje, hoje.day))
-            
-            return cursor.fetchall()
-
-    def registrar_cobranca(self, cliente_id: int, conta_id: int, mensagem: str, 
-                          status: str, tentativas: int = 1, erro_detalhe: str = None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO historico_cobrancas 
-                (cliente_id, conta_id, mensagem, status, tentativas, erro_detalhe)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            ''', (cliente_id, conta_id, mensagem, status, tentativas, erro_detalhe))
-
-    def registrar_pagamento(self, cliente_id: int, valor: float, data_pagamento: str, 
-                        mes_referencia: str = None, confirmado: bool = False) -> int:
-        if isinstance(data_pagamento, str):
-            data_pagamento = datetime.strptime(data_pagamento, '%Y-%m-%d').date()
-        
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            if not mes_referencia:
-                mes_referencia = datetime.now().strftime('%Y-%m')
-                
-            cursor.execute('''
-                INSERT INTO historico_pagamentos 
-                (cliente_id, valor, data_pagamento, mes_referencia, confirmado)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
-            ''', (cliente_id, valor, data_pagamento, mes_referencia, confirmado))
-            pagamento_id = cursor.fetchone()[0]
-            
-            cursor.execute('''
-                INSERT INTO cliente_status 
-                (cliente_id, status, last_payment_date, updated_at)
-                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (cliente_id) 
-                DO UPDATE SET 
-                    status = EXCLUDED.status, 
-                    last_payment_date = EXCLUDED.last_payment_date,
-                    updated_at = EXCLUDED.updated_at
-            ''', (cliente_id, 'ativo', data_pagamento))
-            
-            return pagamento_id
-
-    def get_ultimo_pagamento_cliente(self, cliente_id: int) -> Optional[str]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT data_pagamento 
-                FROM historico_pagamentos 
-                WHERE cliente_id = %s 
-                ORDER BY data_pagamento DESC 
-                LIMIT 1
-            ''', (cliente_id,))
-            result = cursor.fetchone()
-            return result[0] if result else None
-
-    def get_cliente_status(self, cliente_id: int) -> Optional[ClienteStatus]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, cliente_id, status, last_payment_date, dias_tolerancia
-                FROM cliente_status WHERE cliente_id = %s
-            ''', (cliente_id,))
-            result = cursor.fetchone()
-            return ClienteStatus(*result) if result else None
-
+    
     def update_cliente_status(self, cliente_id: int, status: str):
+        """Atualiza status do cliente (ativo/inativo/suspenso)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO cliente_status (cliente_id, status, updated_at)
-                VALUES (%s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (cliente_id) 
-                DO UPDATE SET 
-                    status = EXCLUDED.status, 
-                    updated_at = EXCLUDED.updated_at
-            ''', (cliente_id, status))
+                UPDATE clientes 
+                SET status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            ''', (status, cliente_id))
 
-    def registrar_interacao(self, cliente_id: int, tipo_interacao: str, mensagem: str):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO interacoes_cliente (cliente_id, tipo_interacao, mensagem)
-                VALUES (%s, %s, %s)
-            ''', (cliente_id, tipo_interacao, mensagem))
+    # ========== TEMPLATES ==========
 
-    def inserir_template(self, nome: str, template_text: str, variaveis: str = None) -> int:
+    def inserir_template(self, nome: str, template_text: str, variaveis: str = None, tipo: str = 'financeira') -> int:
+        """Insere ou atualiza um template de mensagem"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO message_templates (nome, template_text, variaveis)
-                VALUES (%s, %s, %s)
+                INSERT INTO message_templates (nome, tipo, template_text, variaveis)
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (nome) 
                 DO UPDATE SET 
+                    tipo = EXCLUDED.tipo,
                     template_text = EXCLUDED.template_text, 
                     variaveis = EXCLUDED.variaveis,
                     ativo = true,
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id
-            ''', (nome, template_text, variaveis))
+            ''', (nome, tipo, template_text, variaveis))
             return cursor.fetchone()[0]
 
     def get_template_by_name(self, nome: str) -> Optional[MessageTemplate]:
+        """Busca um template por nome"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, nome, template_text, variaveis, ativo 
+                SELECT id, nome, template_text, variaveis, ativo, tipo
                 FROM message_templates WHERE nome = %s AND ativo = true
             ''', (nome,))
             result = cursor.fetchone()
-            return MessageTemplate(*result) if result else None
+            if result:
+                return MessageTemplate(
+                    id=result[0],
+                    nome=result[1],
+                    template_text=result[2],
+                    variaveis=result[3],
+                    ativo=result[4],
+                    tipo=result[5]
+                )
+            return None
 
     def get_all_templates(self) -> List[MessageTemplate]:
+        """Retorna todos os templates ativos"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT id, nome, template_text, variaveis, ativo 
+                SELECT id, nome, template_text, variaveis, ativo, tipo
                 FROM message_templates WHERE ativo = true
+                ORDER BY tipo, nome
             ''')
-            return [MessageTemplate(*row) for row in cursor.fetchall()]
+            return [MessageTemplate(
+                id=row[0],
+                nome=row[1],
+                template_text=row[2],
+                variaveis=row[3],
+                ativo=row[4],
+                tipo=row[5]
+            ) for row in cursor.fetchall()]
 
-    def get_clientes_inadimplentes(self, dias_tolerancia: int = 30) -> List[Tuple]:
+    # ========== HISTÓRICO DE ENVIOS ==========
+
+    def registrar_envio(self, cliente_id: int, mensagem: str, status: str, 
+                       tipo: str = 'financeira', template_usado: str = None,
+                       tentativas: int = 1, erro_detalhe: str = None) -> int:
+        """Registra um envio de mensagem no histórico"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT c.id, c.nome, c.digisac_contact_id, cs.last_payment_date,
-                       EXTRACT(DAY FROM (CURRENT_DATE - cs.last_payment_date)) as dias_atraso
-                FROM clientes c
-                JOIN cliente_status cs ON c.id = cs.cliente_id
-                WHERE cs.status = 'inadimplente' 
-                OR (cs.last_payment_date IS NULL OR 
-                    CURRENT_DATE - cs.last_payment_date > %s)
-            ''', (dias_tolerancia,))
-            return cursor.fetchall()
+                INSERT INTO historico_envios 
+                (cliente_id, tipo, template_usado, mensagem, status, tentativas, erro_detalhe)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (cliente_id, tipo, template_usado, mensagem, status, tentativas, erro_detalhe))
+            return cursor.fetchone()[0]
 
-    def get_estatisticas_cobrancas(self, dias: int = 30) -> Dict[str, Any]:
+    def get_historico_cliente(self, cliente_id: int, limit: int = 50) -> List[Dict]:
+        """Retorna histórico de envios de um cliente"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, tipo, template_usado, mensagem, status, 
+                       data_envio, tentativas, erro_detalhe
+                FROM historico_envios
+                WHERE cliente_id = %s
+                ORDER BY data_envio DESC
+                LIMIT %s
+            ''', (cliente_id, limit))
+            
+            return [{
+                'id': row[0],
+                'tipo': row[1],
+                'template_usado': row[2],
+                'mensagem': row[3],
+                'status': row[4],
+                'data_envio': row[5],
+                'tentativas': row[6],
+                'erro_detalhe': row[7]
+            } for row in cursor.fetchall()]
+
+    def get_estatisticas_envios(self, dias: int = 30) -> Dict[str, Any]:
+        """Retorna estatísticas de envios dos últimos N dias"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT 
                     COUNT(*) as total,
-                    COUNT(CASE WHEN status = 'enviado' THEN 1 END) as enviadas,
+                    COUNT(CASE WHEN status = 'enviado' THEN 1 END) as enviados,
                     COUNT(CASE WHEN status = 'erro' THEN 1 END) as erros,
-                    COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes
-                FROM historico_cobrancas 
+                    COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes,
+                    COUNT(CASE WHEN tipo = 'financeira' THEN 1 END) as financeiros,
+                    COUNT(CASE WHEN tipo = 'documento' THEN 1 END) as documentos
+                FROM historico_envios 
                 WHERE data_envio >= CURRENT_DATE - INTERVAL '%s days'
             ''', (dias,))
             result = cursor.fetchone()
             return {
                 'total': result[0],
-                'enviadas': result[1],
+                'enviados': result[1],
                 'erros': result[2],
-                'pendentes': result[3]
+                'pendentes': result[3],
+                'financeiros': result[4],
+                'documentos': result[5]
             }
+
+    # ========== UTILIDADES ==========
 
     def health_check(self) -> bool:
         """Verifica se o banco está respondendo"""
@@ -502,9 +348,12 @@ class DatabaseManager:
             return False
 
     def close_pool(self):
+        """Fecha pool de conexões"""
         if self.pool:
             self.pool.closeall()
 
+
+# ========== EXCEÇÕES ==========
 
 class DatabaseError(Exception):
     """Exceção base para erros de banco de dados"""
