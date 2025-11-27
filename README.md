@@ -32,7 +32,7 @@ Frontend (Web UI) → API REST (FastAPI) → PostgreSQL + Digisac API
 
 ## Início Rápido
 
-### Docker (Recomendado)
+### Docker
 
 ```bash
 # 1. Clone e configure
