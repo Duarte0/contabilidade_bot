@@ -132,8 +132,18 @@ async def enviar_mensagens_lote(
                 
                 # 3. Usar mensagem padrão
                 elif request.mensagem_padrao:
-                    # Substituir ${nome} se presente
-                    mensagem = request.mensagem_padrao.replace('${nome}', cliente.nome)
+                    # Criar contexto com todas as variáveis
+                    context = {'nome': cliente.nome}
+                    
+                    # Adicionar variáveis extras se fornecidas
+                    if hasattr(request, 'variaveis_extras') and request.variaveis_extras:
+                        context.update(request.variaveis_extras)
+                    
+                    # Renderizar mensagem padrão com as variáveis
+                    mensagem = template_manager.engine._render_text(
+                        request.mensagem_padrao, 
+                        context
+                    )
                     fonte = "padrao"
                 
                 else:
