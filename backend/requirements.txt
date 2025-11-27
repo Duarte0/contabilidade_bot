@@ -1,0 +1,7 @@
+requests
+python-dotenv
+python-dateutil
+flask 
+ngrok
+psycopg2-binary
+pytest

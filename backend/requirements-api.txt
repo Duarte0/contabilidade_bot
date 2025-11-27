@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+
+redis
+celery
+
+email-validator
+
+prometheus-client
+
+python-markdown
