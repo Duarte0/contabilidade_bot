@@ -220,4 +220,32 @@ MIT
 
 ---
 
+## 🌐 Compartilhar com Outras Pessoas
+
+Para permitir que outras pessoas acessem o sistema pela internet:
+
+### Opção 1: Ngrok (Rápido e Fácil) ⚡
+
+1. Instale o [ngrok](https://ngrok.com/download)
+2. Inicie os túneis:
+   ```bash
+   ngrok http 8000  # Backend
+   ngrok http 3000  # Frontend (em outro terminal)
+   ```
+3. Configure o `frontend/config.js` com a URL do backend
+4. Compartilhe a URL do frontend
+
+**📖 Documentação completa:** [`COMO-COMPARTILHAR.md`](./COMO-COMPARTILHAR.md)  
+**⚡ Guia rápido:** [`QUICK-START-NGROK.md`](./QUICK-START-NGROK.md)
+
+### Opção 2: Deploy em Servidor (Produção) 🚀
+
+Para uso permanente, hospede em:
+- **Heroku** - Deploy gratuito de Docker
+- **Railway** - Deploy simples e rápido
+- **AWS/Azure/GCP** - Controle total
+- **DigitalOcean** - VPS acessível
+
+---
+
 **Sistema de Mensagens WhatsApp - Digisac Integration**

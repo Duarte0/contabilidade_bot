@@ -1,5 +1,12 @@
-// Configuração da API
-const API_URL = 'http://localhost:8000/api';
+// Configuração da API - Usa window.APP_CONFIG se disponível
+const API_URL = window.APP_CONFIG?.API_URL || (
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8000/api'
+        : `${window.location.protocol}//${window.location.hostname}:8000/api`
+);
+
+console.log('🚀 Sistema inicializado');
+console.log('📡 API URL:', API_URL);
 
 // Estado global
 let clientesSelecionados = new Set();
