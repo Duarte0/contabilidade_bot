@@ -36,7 +36,8 @@ async def listar_clientes(
             params = []
             
             if nome:
-                query += " AND c.nome ILIKE %s"
+                # Normalizar busca removendo acentos (compatível com PostgreSQL)
+                query += " AND LOWER(UNACCENT(c.nome)) LIKE LOWER(UNACCENT(%s))"
                 params.append(f"%{nome}%")
             
             if status:
