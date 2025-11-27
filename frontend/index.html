@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Mensagens WhatsApp</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sistema de Mensagens WhatsApp</h1>
+            <p class="subtitle">Envio em lote via Digisac API</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('enviar')">Enviar em Lote</button>
+            <button class="tab" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="showTab('templates')">Templates</button>
+        </div>
+
+        <!-- TAB: Enviar em Lote -->
+        <div id="tab-enviar" class="tab-content active">
+            <div class="card">
+                <h2 class="card-title">Enviar Mensagens em Lote</h2>
+                
+                <!-- Buscar Clientes -->
+                <div class="form-group">
+                    <label>Buscar Clientes</label>
+                    <div class="search-box">
+                        <input type="text" id="searchClientes" placeholder="Digite o nome do cliente..." onkeyup="buscarClientes()">
+                        <button class="btn btn-primary" onclick="carregarClientes()">Carregar Todos</button>
+                    </div>
+                </div>
+
+                <!-- Lista de Clientes -->
+                <div class="form-group">
+                    <label>Selecionar Clientes</label>
+                    <div id="selectedCount" class="selected-count" style="display:none;">0 clientes selecionados</div>
+                    <div id="clientesLista" class="clientes-grid">
+                        <div class="loading">Carregue os clientes para começar</div>
+                    </div>
+                </div>
+
+                <!-- Tipo de Mensagem -->
+                <div class="form-group">
+                    <label>Tipo de Mensagem</label>
+                    <select id="tipoCobranca" onchange="atualizarTemplates()">
+                        <option value="financeira">Cobrança Financeira</option>
+                        <option value="documento">Solicitação de Documentos</option>
+                    </select>
+                </div>
+
+                <!-- Template -->
+                <div class="form-group">
+                    <label>Template (Opcional)</label>
+                    <select id="templateSelect">
+                        <option value="">Usar mensagem personalizada</option>
+                    </select>
+                    <button class="btn btn-secondary" style="margin-top:10px;" onclick="previewTemplate()">Pré-visualizar</button>
+                </div>
+
+                <!-- Variáveis Extras -->
+                <div class="form-group">
+                    <label>Variáveis Personalizadas</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <input type="text" id="var_valor" placeholder="Valor (ex: 150,00)" style="width: 100%;">
+                            <small>Usar: ${'{'}valor${'}'}</small>
+                        </div>
+                        <div>
+                            <input type="text" id="var_dia_vencimento" placeholder="Dia vencimento (ex: 10)" style="width: 100%;">
+                            <small>Usar: ${'{'}dia_vencimento${'}'}</small>
+                        </div>
+                        <div>
+                            <input type="text" id="var_data_vencimento" placeholder="Data vencimento (ex: 10/12/2025)" style="width: 100%;">
+                            <small>Usar: ${'{'}data_vencimento${'}'}</small>
+                        </div>
+                        <div>
+                            <input type="text" id="var_descricao" placeholder="Descrição/observação" style="width: 100%;">
+                            <small>Usar: ${'{'}descricao${'}'}</small>
+                        </div>
+                    </div>
+                    <small>Deixe em branco se não usar. A variável ${'$'}{nome} é preenchida automaticamente.</small>
+                </div>
+
+                <!-- Editor de Mensagem -->
+                <div class="form-group">
+                    <label>Mensagem Padrão</label>
+                    <textarea id="mensagemPadrao" placeholder="Digite sua mensagem... Use ${nome} para o nome do cliente">Olá ${nome}!
+
+Espero que esteja tudo bem!
+
+Estou entrando em contato para...
+
+Fico no aguardo do seu retorno.
+
+Obrigado!</textarea>
+                </div>
+
+                <!-- Preview -->
+                <div id="previewBox" class="preview-box" style="display:none;">
+                    <div class="preview-title">Preview da Mensagem</div>
+                    <div id="previewContent" class="preview-message"></div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="enviarLote()">Enviar Agora</button>
+                    <button class="btn btn-secondary" onclick="limparFormulario()">Limpar</button>
+                </div>
+
+                <!-- Resultado -->
+                <div id="resultBox" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- TAB: Dashboard -->
+        <div id="tab-dashboard" class="tab-content">
+            <div class="stats-grid" id="statsGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Carregando estatísticas...
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Atividades Recentes</h2>
+                <div id="atividadesRecentes">
+                    <div class="loading">Carregando...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Templates -->
+        <div id="tab-templates" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Gerenciar Templates</h2>
+                <div id="templatesList">
+                    <div class="loading">Carregando templates...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
