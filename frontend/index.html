@@ -3,61 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Sistema de Mensagens WhatsApp</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Favicon inline para evitar 404 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232563eb'/%3E%3Cpath d='M18 36l6 6 22-22' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons UMD (garante window.lucide disponível) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    
+    <!-- Cache bust para CSS -->
+    <link rel="stylesheet" href="style.css?v=nocache1732736500">
 </head>
 <body>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+    
     <div class="container">
         <header>
-            <h1>Sistema de Mensagens WhatsApp</h1>
-            <p class="subtitle">Envio em lote via Digisac API</p>
+            <div class="header-content">
+                <div class="header-icon">
+                    <i data-lucide="message-circle"></i>
+                </div>
+                <div>
+                    <h1>Sistema de Mensagens WhatsApp</h1>
+                    <p class="subtitle">
+                        <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+                        Envio em lote via Digisac API
+                    </p>
+                </div>
+            </div>
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="showTab('enviar')">Enviar em Lote</button>
-            <button class="tab" onclick="showTab('dashboard')">Dashboard</button>
-            <button class="tab" onclick="showTab('templates')">Templates</button>
+            <button class="tab active" onclick="showTab('enviar')">
+                <i data-lucide="send"></i>
+                <span>Enviar em Lote</span>
+            </button>
+            <button class="tab" onclick="showTab('dashboard')">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="tab" onclick="showTab('templates')">
+                <i data-lucide="file-text"></i>
+                <span>Templates</span>
+            </button>
         </div>
 
         <!-- TAB: Enviar em Lote -->
         <div id="tab-enviar" class="tab-content active">
             <div class="card">
-                <h2 class="card-title">Enviar Mensagens em Lote</h2>
+                <h2 class="card-title">
+                    <i data-lucide="send" style="width: 24px; height: 24px;"></i>
+                    Enviar Mensagens em Lote
+                </h2>
                 
                 <!-- Buscar Clientes -->
                 <div class="form-group">
-                    <label>Buscar Clientes</label>
+                    <label>
+                        <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                        Buscar Clientes
+                    </label>
                     <div class="search-box">
-                        <input type="text" id="searchClientes" placeholder="Digite o nome do cliente..." onkeyup="buscarClientes()">
-                        <button class="btn btn-primary" onclick="carregarClientes()">Carregar Todos</button>
+                        <div class="input-with-icon">
+                            <i data-lucide="search" class="input-icon"></i>
+                            <input type="text" id="searchClientes" placeholder="Digite o nome do cliente..." onkeyup="buscarClientesDebounced()">
+                        </div>
+                        <button class="btn btn-primary" onclick="carregarClientes()">
+                            <i data-lucide="users"></i>
+                            <span>Carregar Todos</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Lista de Clientes -->
                 <div class="form-group">
-                    <label>Selecionar Clientes</label>
-                    <div id="selectedCount" class="selected-count" style="display:none;">0 clientes selecionados</div>
+                    <label>
+                        <i data-lucide="user-check" style="width: 16px; height: 16px;"></i>
+                        Selecionar Clientes
+                    </label>
+                    <div id="selectedCount" class="selected-count" style="display:none;">
+                        <i data-lucide="check-circle"></i>
+                        <span>0 clientes selecionados</span>
+                    </div>
                     <div id="clientesLista" class="clientes-grid">
-                        <div class="loading">Carregue os clientes para começar</div>
+                        <div class="empty-state">
+                            <i data-lucide="users" style="width: 48px; height: 48px;"></i>
+                            <p>Carregue os clientes para começar</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Tipo de Mensagem -->
                 <div class="form-group">
-                    <label>Tipo de Mensagem</label>
-                    <select id="tipoCobranca" onchange="atualizarTemplates()">
-                        <option value="financeira">Cobrança Financeira</option>
-                        <option value="documento">Solicitação de Documentos</option>
-                    </select>
+                    <label>
+                        <i data-lucide="tag" style="width: 16px; height: 16px;"></i>
+                        Tipo de Mensagem
+                    </label>
+                    <div class="select-wrapper">
+                        <i data-lucide="tag" class="select-icon"></i>
+                        <select id="tipoCobranca" onchange="atualizarTemplates()">
+                            <option value="financeira">💰 Cobrança Financeira</option>
+                            <option value="documento">📄 Solicitação de Documentos</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Template -->
                 <div class="form-group">
-                    <label>Template (Opcional)</label>
-                    <select id="templateSelect">
-                        <option value="">Usar mensagem personalizada</option>
-                    </select>
-                    <button class="btn btn-secondary" style="margin-top:10px;" onclick="previewTemplate()">Pré-visualizar</button>
+                    <label>
+                        <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                        Template (Opcional)
+                    </label>
+                    <div class="select-wrapper">
+                        <i data-lucide="file-text" class="select-icon"></i>
+                        <select id="templateSelect">
+                            <option value="">Usar mensagem personalizada</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top:10px;" onclick="previewTemplate()">
+                        <i data-lucide="eye"></i>
+                        <span>Pré-visualizar</span>
+                    </button>
                 </div>
 
                 <!-- Variáveis Extras -->
@@ -66,27 +139,45 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                         <div>
                             <input type="text" id="var_valor" placeholder="Valor (ex: 150,00)" style="width: 100%;">
-                            <small>Usar: ${'{'}valor${'}'}</small>
+                            <small>
+                                Insira no texto: <code>${valor}</code>
+                                <button class="btn btn-ghost" style="padding:4px 8px; font-size:12px;" onclick="insertVar('valor')">Inserir</button>
+                            </small>
                         </div>
                         <div>
                             <input type="text" id="var_dia_vencimento" placeholder="Dia vencimento (ex: 10)" style="width: 100%;">
-                            <small>Usar: ${'{'}dia_vencimento${'}'}</small>
+                            <small>
+                                Insira no texto: <code>${dia_vencimento}</code>
+                                <button class="btn btn-ghost" style="padding:4px 8px; font-size:12px;" onclick="insertVar('dia_vencimento')">Inserir</button>
+                            </small>
                         </div>
                         <div>
                             <input type="text" id="var_data_vencimento" placeholder="Data vencimento (ex: 10/12/2025)" style="width: 100%;">
-                            <small>Usar: ${'{'}data_vencimento${'}'}</small>
+                            <small>
+                                Insira no texto: <code>${data_vencimento}</code>
+                                <button class="btn btn-ghost" style="padding:4px 8px; font-size:12px;" onclick="insertVar('data_vencimento')">Inserir</button>
+                            </small>
                         </div>
                         <div>
                             <input type="text" id="var_descricao" placeholder="Descrição/observação" style="width: 100%;">
-                            <small>Usar: ${'{'}descricao${'}'}</small>
+                            <small>
+                                Insira no texto: <code>${descricao}</code>
+                                <button class="btn btn-ghost" style="padding:4px 8px; font-size:12px;" onclick="insertVar('descricao')">Inserir</button>
+                            </small>
                         </div>
                     </div>
-                    <small>Deixe em branco se não usar. A variável ${'$'}{nome} é preenchida automaticamente.</small>
+                    <small>
+                        Dica: preencha os campos acima e use as variáveis no texto com o formato <code>${variavel}</code>.
+                        Variáveis automáticas disponíveis: <code>${nome}</code>, <code>${data_hoje}</code>, <code>${dia_semana}</code>, <code>${mes_ano}</code>, <code>${empresa}</code>.
+                    </small>
                 </div>
 
                 <!-- Editor de Mensagem -->
                 <div class="form-group">
-                    <label>Mensagem Padrão</label>
+                    <label>
+                        <i data-lucide="message-square" style="width: 16px; height: 16px;"></i>
+                        Mensagem Padrão
+                    </label>
                     <textarea id="mensagemPadrao" placeholder="Digite sua mensagem... Use ${nome} para o nome do cliente">Olá ${nome}!
 
 Espero que esteja tudo bem!
@@ -106,8 +197,14 @@ Obrigado!</textarea>
 
                 <!-- Botões de Ação -->
                 <div class="action-buttons">
-                    <button class="btn btn-success" onclick="enviarLote()">Enviar Agora</button>
-                    <button class="btn btn-secondary" onclick="limparFormulario()">Limpar</button>
+                    <button class="btn btn-success" onclick="enviarLote()">
+                        <i data-lucide="send"></i>
+                        <span>Enviar Agora</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="limparFormulario()">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>Limpar</span>
+                    </button>
                 </div>
 
                 <!-- Resultado -->
@@ -120,14 +217,20 @@ Obrigado!</textarea>
             <div class="stats-grid" id="statsGrid">
                 <div class="loading">
                     <div class="spinner"></div>
-                    Carregando estatísticas...
+                    <p>Carregando estatísticas...</p>
                 </div>
             </div>
 
             <div class="card">
-                <h2 class="card-title">Atividades Recentes</h2>
+                <h2 class="card-title">
+                    <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
+                    Atividades Recentes
+                </h2>
                 <div id="atividadesRecentes">
-                    <div class="loading">Carregando...</div>
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -135,14 +238,28 @@ Obrigado!</textarea>
         <!-- TAB: Templates -->
         <div id="tab-templates" class="tab-content">
             <div class="card">
-                <h2 class="card-title">Gerenciar Templates</h2>
+                <h2 class="card-title">
+                    <i data-lucide="file-text" style="width: 24px; height: 24px;"></i>
+                    Gerenciar Templates
+                </h2>
                 <div id="templatesList">
-                    <div class="loading">Carregando templates...</div>
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando templates...</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=nocache1732736500" defer></script>
+    <script>
+        // Inicializar ícones Lucide de forma segura após load
+        window.addEventListener('load', () => {
+            if (window.lucide && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
+        });
+    </script>
 </body>
 </html>
