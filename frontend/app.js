@@ -11,6 +11,7 @@ console.log('📡 API URL:', API_URL);
 // Estado global
 let clientesSelecionados = new Set();
 let todosClientes = [];
+let clientesCache = {}; // Cache para manter dados dos clientes selecionados
 
 // ========== SISTEMA DE TOASTS ==========
 function showToast(title, message, type = 'info') {
@@ -52,6 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide && typeof lucide.createIcons === 'function') {
         lucide.createIcons();
     }
+    
+    // Fechar modais ao clicar fora
+    window.onclick = function(event) {
+        const modalTemplate = document.getElementById('modalTemplate');
+        const modalClientes = document.getElementById('modalClientesSelecionados');
+        
+        if (event.target === modalTemplate) {
+            fecharModalTemplate();
+        }
+        if (event.target === modalClientes) {
+            fecharModalClientesSelecionados();
+        }
+    };
 });
 
 // Inserir variável no textarea da mensagem no cursor
@@ -166,8 +180,14 @@ function renderizarClientes(clientes) {
 function toggleCliente(clienteId) {
     if (clientesSelecionados.has(clienteId)) {
         clientesSelecionados.delete(clienteId);
+        delete clientesCache[clienteId]; // Remove do cache
     } else {
         clientesSelecionados.add(clienteId);
+        // Adiciona ao cache
+        const cliente = todosClientes.find(c => c.id === clienteId);
+        if (cliente) {
+            clientesCache[clienteId] = cliente;
+        }
     }
     
     renderizarClientes(todosClientes);
@@ -186,6 +206,117 @@ function atualizarContador() {
         lucide.createIcons();
     } else {
         contador.style.display = 'none';
+    }
+}
+
+// ========== MODAL CLIENTES SELECIONADOS ==========
+function abrirModalClientesSelecionados() {
+    const modal = document.getElementById('modalClientesSelecionados');
+    const lista = document.getElementById('listaClientesSelecionados');
+    
+    if (clientesSelecionados.size === 0) {
+        showToast('Aviso', 'Nenhum cliente selecionado', 'info');
+        return;
+    }
+    
+    // Busca os dados dos clientes selecionados usando o cache
+    const clientesSelecionadosArray = Array.from(clientesSelecionados);
+    const clientesDetalhes = clientesSelecionadosArray
+        .map(id => clientesCache[id])
+        .filter(c => c !== undefined); // Remove clientes não encontrados
+    
+    // Renderiza a lista
+    lista.innerHTML = clientesDetalhes.map(cliente => {
+        const iniciais = cliente.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        const telefone = cliente.telefone || 'Sem telefone';
+        const email = cliente.email || 'Sem email';
+        
+        return `
+            <div class="cliente-selecionado-item">
+                <div class="cliente-selecionado-info">
+                    <div class="cliente-selecionado-avatar">${iniciais}</div>
+                    <div class="cliente-selecionado-detalhes">
+                        <div class="cliente-selecionado-nome">${cliente.nome}</div>
+                        <div class="cliente-selecionado-contato">
+                            <i data-lucide="phone"></i>
+                            <span>${telefone}</span>
+                            ${email !== 'Sem email' ? `<i data-lucide="mail" style="margin-left: 12px;"></i><span>${email}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="cliente-selecionado-actions">
+                    <button class="btn-icon danger" onclick="removerClienteDaSelecao(${cliente.id})" title="Remover da seleção">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    lucide.createIcons();
+    modal.style.display = 'flex';
+}
+
+function fecharModalClientesSelecionados() {
+    document.getElementById('modalClientesSelecionados').style.display = 'none';
+}
+
+function removerClienteDaSelecao(clienteId) {
+    clientesSelecionados.delete(clienteId);
+    delete clientesCache[clienteId];
+    atualizarContador();
+    renderizarClientes(todosClientes);
+    
+    // Atualiza o conteúdo do modal sem reabrir
+    if (clientesSelecionados.size > 0) {
+        const lista = document.getElementById('listaClientesSelecionados');
+        const clientesSelecionadosArray = Array.from(clientesSelecionados);
+        const clientesDetalhes = clientesSelecionadosArray
+            .map(id => clientesCache[id])
+            .filter(c => c !== undefined);
+        
+        lista.innerHTML = clientesDetalhes.map(cliente => {
+            const iniciais = cliente.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const telefone = cliente.telefone || 'Sem telefone';
+            const email = cliente.email || 'Sem email';
+            
+            return `
+                <div class="cliente-selecionado-item">
+                    <div class="cliente-selecionado-info">
+                        <div class="cliente-selecionado-avatar">${iniciais}</div>
+                        <div class="cliente-selecionado-detalhes">
+                            <div class="cliente-selecionado-nome">${cliente.nome}</div>
+                            <div class="cliente-selecionado-contato">
+                                <i data-lucide="phone"></i>
+                                <span>${telefone}</span>
+                                ${email !== 'Sem email' ? `<i data-lucide="mail" style="margin-left: 12px;"></i><span>${email}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cliente-selecionado-actions">
+                        <button class="btn-icon danger" onclick="removerClienteDaSelecao(${cliente.id})" title="Remover da seleção">
+                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        lucide.createIcons();
+    } else {
+        fecharModalClientesSelecionados();
+        showToast('Aviso', 'Todos os clientes foram removidos da seleção', 'info');
+    }
+}
+
+function limparSelecao() {
+    if (confirm('Tem certeza que deseja remover todos os clientes da seleção?')) {
+        clientesSelecionados.clear();
+        clientesCache = {}; // Limpa o cache
+        atualizarContador();
+        renderizarClientes(todosClientes);
+        fecharModalClientesSelecionados();
+        showToast('Sucesso', 'Seleção limpa', 'success');
     }
 }
 

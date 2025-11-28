@@ -91,7 +91,7 @@
                         <i data-lucide="user-check" style="width: 16px; height: 16px;"></i>
                         Selecionar Clientes
                     </label>
-                    <div id="selectedCount" class="selected-count" style="display:none;">
+                    <div id="selectedCount" class="selected-count" style="display:none; cursor: pointer;" onclick="abrirModalClientesSelecionados()">
                         <i data-lucide="check-circle"></i>
                         <span>0 clientes selecionados</span>
                     </div>
@@ -311,6 +311,31 @@ ${descricao} - Descrição adicional" required></textarea>
                     <i data-lucide="save"></i>
                     <span>Salvar</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Clientes Selecionados -->
+    <div id="modalClientesSelecionados" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                    Clientes Selecionados
+                </h3>
+                <button class="modal-close" onclick="fecharModalClientesSelecionados()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="listaClientesSelecionados" class="clientes-selecionados-lista">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="limparSelecao()">
+                    <i data-lucide="x-circle"></i>
+                    <span>Limpar Seleção</span>
+                </button>
+                <button class="btn btn-secondary" onclick="fecharModalClientesSelecionados()">Fechar</button>
             </div>
         </div>
     </div>
