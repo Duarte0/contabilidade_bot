@@ -174,10 +174,18 @@ async def enviar_mensagens_lote(
                     sucesso = True
                 
                 # Registrar histórico
+                # Define template_usado baseado na fonte da mensagem
+                if request.template_name:
+                    template_label = request.template_name
+                elif request.mensagens_customizadas and cliente.id in request.mensagens_customizadas:
+                    template_label = "Customizada"
+                else:
+                    template_label = "Padrão"
+                
                 db.registrar_envio(
                     cliente_id=cliente.id,
                     tipo=request.tipo,
-                    template_usado=request.template_name if request.template_name else None,
+                    template_usado=template_label,
                     mensagem=mensagem,
                     status=status,
                     erro_detalhe=erro_msg
