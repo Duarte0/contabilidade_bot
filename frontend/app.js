@@ -197,7 +197,7 @@ async function carregarTemplates() {
         
         const select = document.getElementById('templateSelect');
         select.innerHTML = '<option value="">Usar mensagem personalizada</option>' +
-            templates.map(t => `<option value="${t.nome}">${t.nome}</option>`).join('');
+            templates.filter(t => t.ativo).map(t => `<option value="${t.nome}">${t.nome}</option>`).join('');
     } catch (error) {
         console.error('Erro ao carregar templates:', error);
     }
@@ -208,20 +208,205 @@ async function carregarListaTemplates() {
     lista.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
     
     try {
+        // Busca todos os templates (ativos e inativos)
         const response = await fetch(`${API_URL}/templates/`);
         const templates = await response.json();
         
+        if (templates.length === 0) {
+            lista.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="file-text" style="width: 48px; height: 48px;"></i>
+                    <p>Nenhum template cadastrado</p>
+                    <button class="btn btn-primary" onclick="abrirModalNovoTemplate()" style="margin-top: 16px;">
+                        <i data-lucide="plus"></i>
+                        <span>Criar Primeiro Template</span>
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+        
         lista.innerHTML = templates.map(t => `
-            <div class="card" style="margin-bottom: 15px; padding: 15px;">
-                <h3 style="margin-bottom: 10px;">${t.nome}</h3>
-                <pre style="background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto;">${t.template_text}</pre>
-                <div style="margin-top: 10px; color: #7f8c8d; font-size: 13px;">
-                    Variáveis: ${t.variaveis || 'nome, valor, dia_vencimento, data_vencimento, descricao'}
+            <div class="template-card">
+                <div class="template-card-header">
+                    <h3 class="template-card-title">${t.nome}</h3>
+                    <div class="template-card-actions">
+                        <button class="btn-icon" onclick="editarTemplate('${t.nome}')" title="Editar">
+                            <i data-lucide="edit-2" style="width: 16px; height: 16px;"></i>
+                        </button>
+                        <button class="btn-icon danger" onclick="confirmarDeletarTemplate('${t.nome}')" title="Excluir">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="template-card-body">${t.template_text}</div>
+                <div class="template-card-footer">
+                    <span>Variáveis: ${t.variaveis || 'nome, valor, dia_vencimento, data_vencimento, descricao'}</span>
+                    <span class="template-status ${t.ativo ? 'ativo' : 'inativo'}">
+                        <i data-lucide="${t.ativo ? 'check-circle' : 'circle'}" style="width: 14px; height: 14px;"></i>
+                        ${t.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
                 </div>
             </div>
         `).join('');
+        
+        lucide.createIcons();
     } catch (error) {
         lista.innerHTML = `<div class="result-box error">Erro: ${error.message}</div>`;
+        showToast('Erro', 'Não foi possível carregar os templates', 'error');
+    }
+}
+
+// CRUD Functions
+function abrirModalNovoTemplate() {
+    document.getElementById('modalTemplateTitle').textContent = 'Novo Template';
+    document.getElementById('templateIdEdit').value = '';
+    document.getElementById('templateNomeOriginal').value = '';
+    document.getElementById('templateNome').value = '';
+    document.getElementById('templateTexto').value = '';
+    document.getElementById('templateVariaveis').value = '';
+    document.getElementById('templateAtivo').checked = true;
+    document.getElementById('templateAtivoGroup').style.display = 'none';
+    document.getElementById('modalTemplate').style.display = 'flex';
+    lucide.createIcons();
+}
+
+async function editarTemplate(nomeTemplate) {
+    try {
+        const response = await fetch(`${API_URL}/templates/${encodeURIComponent(nomeTemplate)}`);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                showToast('Erro', 'Template não encontrado no banco de dados', 'error');
+                carregarListaTemplates(); // Recarrega a lista
+                return;
+            }
+            throw new Error('Erro ao carregar template');
+        }
+        
+        const template = await response.json();
+        
+        document.getElementById('modalTemplateTitle').textContent = 'Editar Template';
+        document.getElementById('templateIdEdit').value = template.id;
+        document.getElementById('templateNomeOriginal').value = template.nome;
+        document.getElementById('templateNome').value = template.nome;
+        document.getElementById('templateNome').disabled = true; // Não permite editar o nome
+        document.getElementById('templateTexto').value = template.template_text;
+        document.getElementById('templateVariaveis').value = template.variaveis || '';
+        document.getElementById('templateAtivo').checked = template.ativo;
+        document.getElementById('templateAtivoGroup').style.display = 'block';
+        document.getElementById('modalTemplate').style.display = 'flex';
+        lucide.createIcons();
+    } catch (error) {
+        console.error('Erro ao carregar template:', error);
+        showToast('Erro', error.message || 'Não foi possível carregar o template', 'error');
+    }
+}
+
+function fecharModalTemplate() {
+    document.getElementById('modalTemplate').style.display = 'none';
+    document.getElementById('templateNome').disabled = false;
+}
+
+async function salvarTemplate() {
+    const templateId = document.getElementById('templateIdEdit').value;
+    const nomeOriginal = document.getElementById('templateNomeOriginal').value;
+    const nome = document.getElementById('templateNome').value.trim();
+    const texto = document.getElementById('templateTexto').value.trim();
+    const variaveis = document.getElementById('templateVariaveis').value.trim();
+    const ativo = document.getElementById('templateAtivo').checked;
+    
+    // Validações
+    if (!nome) {
+        showToast('Atenção', 'Digite o nome do template', 'info');
+        document.getElementById('templateNome').focus();
+        return;
+    }
+    
+    if (!texto) {
+        showToast('Atenção', 'Digite o texto do template', 'info');
+        document.getElementById('templateTexto').focus();
+        return;
+    }
+    
+    try {
+        let response;
+        
+        if (templateId) {
+            // Atualizar template existente
+            console.log('Atualizando template:', nomeOriginal);
+            response = await fetch(`${API_URL}/templates/${encodeURIComponent(nomeOriginal)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    template_text: texto,
+                    variaveis: variaveis || null,
+                    ativo: ativo
+                })
+            });
+        } else {
+            // Criar novo template
+            console.log('Criando novo template:', nome);
+            response = await fetch(`${API_URL}/templates/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome: nome,
+                    template_text: texto,
+                    variaveis: variaveis || null
+                })
+            });
+        }
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Erro ao salvar template');
+        }
+        
+        const resultado = await response.json();
+        console.log('Template salvo:', resultado);
+        
+        showToast('Sucesso', `Template ${templateId ? 'atualizado' : 'criado'} com sucesso!`, 'success');
+        fecharModalTemplate();
+        carregarListaTemplates();
+        carregarTemplates(); // Atualiza o select também
+    } catch (error) {
+        console.error('Erro ao salvar template:', error);
+        showToast('Erro', error.message, 'error');
+    }
+}
+
+async function confirmarDeletarTemplate(nomeTemplate) {
+    if (!confirm(`Tem certeza que deseja excluir o template "${nomeTemplate}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/templates/${encodeURIComponent(nomeTemplate)}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Erro ao excluir template');
+        }
+        
+        showToast('Sucesso', 'Template excluído com sucesso!', 'success');
+        
+        // Remove o card da tela imediatamente
+        const templateCards = document.querySelectorAll('.template-card');
+        templateCards.forEach(card => {
+            if (card.querySelector('.template-card-title').textContent === nomeTemplate) {
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(-20px)';
+                setTimeout(() => card.remove(), 300);
+            }
+        });
+        
+        carregarTemplates(); // Atualiza o select
+    } catch (error) {
+        showToast('Erro', error.message, 'error');
     }
 }
 

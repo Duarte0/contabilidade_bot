@@ -237,7 +237,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT id, nome, template_text, variaveis, ativo, tipo
-                FROM message_templates WHERE nome = %s AND ativo = true
+                FROM message_templates WHERE nome = %s
             ''', (nome,))
             result = cursor.fetchone()
             if result:
@@ -252,12 +252,12 @@ class DatabaseManager:
             return None
 
     def get_all_templates(self) -> List[MessageTemplate]:
-        """Retorna todos os templates ativos"""
+        """Retorna todos os templates (ativos e inativos)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT id, nome, template_text, variaveis, ativo, tipo
-                FROM message_templates WHERE ativo = true
+                FROM message_templates
                 ORDER BY tipo, nome
             ''')
             return [MessageTemplate(

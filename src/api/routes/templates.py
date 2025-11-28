@@ -12,12 +12,18 @@ def get_db():
 
 @router.get("/", response_model=List[TemplateResponse])
 async def listar_templates(
-    ativo: bool = True,
+    ativo: bool = None,
     db: DatabaseManager = Depends(get_db)
 ):
-    """Lista todos os templates disponíveis"""
+    """Lista todos os templates disponíveis. Use ativo=true para apenas ativos, ativo=false para apenas inativos, ou omita para todos"""
     try:
         templates = db.get_all_templates()
+        
+        # Filtra baseado no parâmetro ativo
+        if ativo is not None:
+            templates_filtrados = [t for t in templates if t.ativo == ativo]
+        else:
+            templates_filtrados = templates
         
         return [
             TemplateResponse(
@@ -26,7 +32,7 @@ async def listar_templates(
                 template_text=t.template_text,
                 variaveis=t.variaveis,
                 ativo=t.ativo
-            ) for t in templates if not ativo or t.ativo
+            ) for t in templates_filtrados
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao listar templates: {str(e)}")
@@ -78,10 +84,23 @@ async def atualizar_template(
     db: DatabaseManager = Depends(get_db)
 ):
     """Atualiza um template existente"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        template_atual = db.get_template_by_name(template_name)
+        logger.info(f"Tentando atualizar template: {template_name}")
+        
+        # Decodifica o nome do template
+        from urllib.parse import unquote
+        template_name_decoded = unquote(template_name)
+        logger.info(f"Nome decodificado: {template_name_decoded}")
+        
+        template_atual = db.get_template_by_name(template_name_decoded)
         if not template_atual:
-            raise HTTPException(status_code=404, detail="Template não encontrado")
+            logger.warning(f"Template não encontrado: {template_name_decoded}")
+            raise HTTPException(status_code=404, detail=f"Template '{template_name_decoded}' não encontrado")
+        
+        logger.info(f"Template encontrado: ID={template_atual.id}")
         
         with db.get_connection() as conn:
             cursor = conn.cursor()
@@ -89,11 +108,11 @@ async def atualizar_template(
             updates = []
             params = []
             
-            if template_update.template_text:
+            if template_update.template_text is not None:
                 updates.append("template_text = %s")
                 params.append(template_update.template_text)
             
-            if template_update.variaveis:
+            if template_update.variaveis is not None:
                 updates.append("variaveis = %s")
                 params.append(template_update.variaveis)
             
@@ -101,14 +120,30 @@ async def atualizar_template(
                 updates.append("ativo = %s")
                 params.append(template_update.ativo)
             
-            if updates:
-                updates.append("updated_at = CURRENT_TIMESTAMP")
-                params.append(template_name)
-                
-                query = f"UPDATE message_templates SET {', '.join(updates)} WHERE nome = %s"
-                cursor.execute(query, params)
+            if not updates:
+                logger.warning("Nenhum campo para atualizar")
+                # Se não há updates, retorna o template atual
+                return TemplateResponse(
+                    id=template_atual.id,
+                    nome=template_atual.nome,
+                    template_text=template_atual.template_text,
+                    variaveis=template_atual.variaveis,
+                    ativo=template_atual.ativo
+                )
+            
+            updates.append("updated_at = CURRENT_TIMESTAMP")
+            params.append(template_name_decoded)
+            
+            query = f"UPDATE message_templates SET {', '.join(updates)} WHERE nome = %s"
+            logger.info(f"Query: {query}")
+            logger.info(f"Params: {params}")
+            cursor.execute(query, params)
+            conn.commit()
         
-        template_atualizado = db.get_template_by_name(template_name)
+        # Recarrega o template atualizado
+        template_atualizado = db.get_template_by_name(template_name_decoded)
+        
+        logger.info(f"Template atualizado com sucesso: {template_name_decoded}")
         
         return TemplateResponse(
             id=template_atualizado.id,
@@ -120,6 +155,7 @@ async def atualizar_template(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erro ao atualizar template: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar template: {str(e)}")
 
 @router.delete("/{template_name}", response_model=SuccessResponse)

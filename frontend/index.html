@@ -241,10 +241,17 @@ Obrigado!</textarea>
         <!-- TAB: Templates -->
         <div id="tab-templates" class="tab-content">
             <div class="card">
-                <h2 class="card-title">
-                    <i data-lucide="file-text" style="width: 24px; height: 24px;"></i>
-                    Gerenciar Templates
-                </h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="card-title" style="margin: 0;">
+                        <i data-lucide="file-text" style="width: 24px; height: 24px;"></i>
+                        Gerenciar Templates
+                    </h2>
+                    <button class="btn btn-primary" onclick="abrirModalNovoTemplate()">
+                        <i data-lucide="plus"></i>
+                        <span>Novo Template</span>
+                    </button>
+                </div>
+                
                 <div id="templatesList">
                     <div class="loading">
                         <div class="spinner"></div>
@@ -253,6 +260,60 @@ Obrigado!</textarea>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal Template -->
+    <div id="modalTemplate" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTemplateTitle">Novo Template</h3>
+                <button class="modal-close" onclick="fecharModalTemplate()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="templateIdEdit">
+                <input type="hidden" id="templateNomeOriginal">
+                
+                <div class="form-group">
+                    <label>Nome do Template *</label>
+                    <input type="text" id="templateNome" placeholder="Ex: Cobrança Padrão" required>
+                    <small>Use um nome único e descritivo</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Texto do Template *</label>
+                    <textarea id="templateTexto" rows="8" placeholder="Digite o texto do template...
+
+Use variáveis como:
+${nome} - Nome do cliente
+${valor} - Valor
+${dia_vencimento} - Dia do vencimento
+${data_vencimento} - Data completa
+${descricao} - Descrição adicional" required></textarea>
+                    <small>Use ${variavel} para inserir valores dinâmicos</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Variáveis Disponíveis</label>
+                    <input type="text" id="templateVariaveis" placeholder="Ex: nome, valor, dia_vencimento, data_vencimento">
+                    <small>Separe por vírgula. Deixe vazio para usar as variáveis padrão.</small>
+                </div>
+
+                <div class="form-group" id="templateAtivoGroup" style="display: none;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="templateAtivo" checked style="margin-right: 8px;">
+                        Template Ativo
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="fecharModalTemplate()">Cancelar</button>
+                <button class="btn btn-primary" onclick="salvarTemplate()">
+                    <i data-lucide="save"></i>
+                    <span>Salvar</span>
+                </button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <script src="app.js?v=nocache1732736500" defer></script>
