@@ -238,14 +238,6 @@ Para permitir que outras pessoas acessem o sistema pela internet:
 **📖 Documentação completa:** [`COMO-COMPARTILHAR.md`](./COMO-COMPARTILHAR.md)  
 **⚡ Guia rápido:** [`QUICK-START-NGROK.md`](./QUICK-START-NGROK.md)
 
-### Opção 2: Deploy em Servidor (Produção) 🚀
-
-Para uso permanente, hospede em:
-- **Heroku** - Deploy gratuito de Docker
-- **Railway** - Deploy simples e rápido
-- **AWS/Azure/GCP** - Controle total
-- **DigitalOcean** - VPS acessível
-
 ---
 
 **Sistema de Mensagens WhatsApp - Digisac Integration**
