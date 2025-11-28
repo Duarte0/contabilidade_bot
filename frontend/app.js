@@ -753,6 +753,8 @@ function limparFormulario() {
 async function carregarDashboard() {
     const statsGrid = document.getElementById('statsGrid');
     const atividadesDiv = document.getElementById('atividadesRecentes');
+    const filtroSelect = document.getElementById('filtroTipoAtividades');
+    const tipoFiltro = filtroSelect ? filtroSelect.value : 'todos';
     
     try {
         // Carregar estatísticas
@@ -778,8 +780,9 @@ async function carregarDashboard() {
             </div>
         `;
         
-        // Carregar atividades
-        const atividadesResponse = await fetch(`${API_URL}/dashboard/atividades-recentes?limit=10`);
+        // Carregar atividades com filtro se aplicável
+        const queryTipo = tipoFiltro && tipoFiltro !== 'todos' ? `&tipo=${encodeURIComponent(tipoFiltro)}` : '';
+        const atividadesResponse = await fetch(`${API_URL}/dashboard/atividades-recentes?limit=10${queryTipo}`);
         const atividades = await atividadesResponse.json();
         
         if (atividades.atividades && atividades.atividades.length > 0) {
@@ -813,4 +816,54 @@ async function carregarDashboard() {
         lucide.createIcons();
         showToast('Erro', 'Não foi possível carregar o dashboard', 'error');
     }
+}
+
+// Atualiza somente atividades quando muda o filtro
+function atualizarFiltroAtividades() {
+    // Recarrega somente a lista de atividades sem refazer stats
+    const atividadesDiv = document.getElementById('atividadesRecentes');
+    atividadesDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando...</p></div>';
+    
+    // Obter valores dos filtros
+    const filtroTipo = document.getElementById('filtroTipoAtividades').value;
+    const filtroMes = document.getElementById('filtroMesAtividades').value;
+    const filtroAno = document.getElementById('filtroAnoAtividades').value;
+    
+    // Construir query string
+    let queryParams = 'limit=50';
+    if (filtroTipo && filtroTipo !== 'todos') {
+        queryParams += `&tipo=${encodeURIComponent(filtroTipo)}`;
+    }
+    if (filtroMes && filtroAno) {
+        queryParams += `&mes=${encodeURIComponent(filtroMes)}&ano=${encodeURIComponent(filtroAno)}`;
+    }
+    
+    fetch(`${API_URL}/dashboard/atividades-recentes?${queryParams}`)
+        .then(r => r.json())
+        .then(atividades => {
+            if (atividades.atividades && atividades.atividades.length > 0) {
+                atividadesDiv.innerHTML = atividades.atividades.map(a => `
+                    <div class="result-item">
+                        <span class="badge badge-${a.status === 'enviado' ? 'success' : 'warning'}">
+                            ${a.tipo}
+                        </span>
+                        <strong>${a.cliente}</strong> - ${a.preview}
+                        <br><small style="color:#7f8c8d;">${new Date(a.data).toLocaleString('pt-BR')}</small>
+                    </div>
+                `).join('');
+            } else {
+                atividadesDiv.innerHTML = `<div class="empty-state">
+                    <i data-lucide="inbox" style="width:48px;height:48px;"></i>
+                    <p>Nenhuma atividade encontrada para o período selecionado</p>
+                </div>`;
+            }
+            if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+        })
+        .catch(err => {
+            atividadesDiv.innerHTML = `<div class="empty-state">
+                <i data-lucide="alert-circle" style="width:48px;height:48px;color:var(--danger-500);"></i>
+                <p>Erro ao carregar atividades: ${err.message}</p>
+            </div>`;
+            if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+        });
 }

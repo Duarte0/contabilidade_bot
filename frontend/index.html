@@ -229,6 +229,57 @@ Obrigado!</textarea>
                     <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
                     Atividades Recentes
                 </h2>
+                <div style="display: flex; gap: 16px; margin-top:-10px; margin-bottom:20px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label style="margin-bottom:6px;">
+                            <i data-lucide="filter" style="width:16px;height:16px;"></i>
+                            Filtrar por Tipo
+                        </label>
+                        <div class="select-wrapper">
+                            <i data-lucide="layers" class="select-icon"></i>
+                            <select id="filtroTipoAtividades" onchange="atualizarFiltroAtividades()">
+                                <option value="todos">Todos</option>
+                                <option value="financeira">Financeira</option>
+                                <option value="documento">Documento</option>
+                                <option value="geral">Geral</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label style="margin-bottom:6px;">
+                            <i data-lucide="calendar" style="width:16px;height:16px;"></i>
+                            Filtrar por Período
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <div class="select-wrapper" style="flex: 1;">
+                                <i data-lucide="calendar-days" class="select-icon"></i>
+                                <select id="filtroMesAtividades" onchange="atualizarFiltroAtividades()">
+                                    <option value="">Mês Atual</option>
+                                    <option value="1">Janeiro</option>
+                                    <option value="2">Fevereiro</option>
+                                    <option value="3">Março</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Maio</option>
+                                    <option value="6">Junho</option>
+                                    <option value="7">Julho</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="select-wrapper" style="width: 100px;">
+                                <select id="filtroAnoAtividades" onchange="atualizarFiltroAtividades()">
+                                    <option value="">Atual</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div id="atividadesRecentes">
                     <div class="loading">
                         <div class="spinner"></div>
